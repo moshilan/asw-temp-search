@@ -12,6 +12,7 @@ for (const [name, source] of [['danmei',SOURCES.danmei],['yanqing',SOURCES.yanqi
     assert.equal(parsed.items.length, 100);
     assert.ok(parsed.items.every(x => /^[a-f0-9]{32}$/.test(x.hash)));
     assert.ok(parsed.items.every(x => x.name && x.url.startsWith(source.origin)));
+    assert.ok(parsed.items.every(x => x.category === source.label && x.categoryLabel === source.label));
     assert.ok(parsed.totalPages >= 1);
   });
 }

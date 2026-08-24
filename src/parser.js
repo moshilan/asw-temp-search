@@ -22,7 +22,7 @@ export function parseListPage(html, source) {
     items.push({
       hash,
       name,
-      category: source.id,
+      category: source.label,
       categoryLabel: source.label,
       size,
       uploadedAt,

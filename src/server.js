@@ -23,10 +23,10 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === 'POST' && url.pathname === '/api/search') {
-      const { q = '', category = 'all' } = await readBody(req);
-      const refresh = await refreshAll({ maxPages: 20 });
+      const { q = '', category = '全部', refresh: shouldRefresh = true } = await readBody(req);
+      const refresh = shouldRefresh === false ? { results: [], errors: [] } : await refreshAll({ maxPages: 20 });
       const items = await loadItems();
-      const results = searchItems(items, String(q), String(category)).slice(0, 200);
+      const results = searchItems(items, String(q), String(category));
       return json(res, 200, { results, refresh, meta: await loadMeta(), totalIndexed: items.length });
     }
     if (req.method === 'POST' && url.pathname === '/api/refresh') {

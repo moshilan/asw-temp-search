@@ -4,13 +4,15 @@ const results = document.querySelector('#results');
 const status = document.querySelector('#status');
 const searchBtn = document.querySelector('#searchBtn');
 const refreshBtn = document.querySelector('#refreshBtn');
-let category = 'all';
+let category = '全部';
 
 document.querySelector('#tabs').addEventListener('click', e => {
   const btn = e.target.closest('button[data-category]');
   if (!btn) return;
   category = btn.dataset.category;
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x === btn));
+  const keyword = q.value.trim();
+  if (keyword) search(keyword, false);
 });
 
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -26,20 +28,24 @@ function show(data) {
     </a>`).join('');
 }
 
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  const keyword = q.value.trim();
-  if (!keyword) return;
+async function search(keyword, shouldRefresh) {
   searchBtn.disabled = true;
-  status.textContent = '正在刷新最新资源并搜索…';
+  status.textContent = shouldRefresh ? '正在刷新最新资源并搜索…' : '正在按分类筛选…';
   results.innerHTML = '';
   try {
-    const r = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({q: keyword, category}) });
+    const r = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({q: keyword, category, refresh: shouldRefresh}) });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || '搜索失败');
     show(data);
   } catch (e) { status.textContent = `失败：${e.message}`; }
   finally { searchBtn.disabled = false; }
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const keyword = q.value.trim();
+  if (!keyword) return;
+  search(keyword, true);
 });
 
 refreshBtn.addEventListener('click', async () => {

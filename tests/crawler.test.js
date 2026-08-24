@@ -19,7 +19,7 @@ function memory(items = [], meta = { lastRefreshAt: null, sources: {} }) {
 }
 
 test('incremental refresh continues while a page is all new and stops at a known hash', async () => {
-  const db = memory([{ hash: hash(3), category: 'danmei', name: '旧资源' }]);
+  const db = memory([{ hash: hash(3), category: '耽美', name: '旧资源' }]);
   const requested = [];
   const fetchHtmlFn = async url => {
     requested.push(url);
@@ -33,7 +33,7 @@ test('incremental refresh continues while a page is all new and stops at a known
 });
 
 test('a failed category does not clear the existing index or block another category', async () => {
-  const db = memory([{ hash: hash(9), category: 'danmei', name: '已有资源' }]);
+  const db = memory([{ hash: hash(9), category: '耽美', name: '已有资源' }]);
   const result = await refreshAll({
     ...db,
     sourceIds: ['danmei', 'yanqing'],
@@ -50,7 +50,7 @@ test('a failed category does not clear the existing index or block another categ
 
 test('initialization resumes from its saved next page and saves each fetched page', async () => {
   const db = memory(
-    [{ hash: hash(1), category: 'danmei', name: '第一页资源' }],
+    [{ hash: hash(1), category: '耽美', name: '第一页资源' }],
     { lastRefreshAt: null, sources: {}, initialization: { sources: { danmei: { nextPage: 2, totalPages: 2, completed: false } } } },
   );
   const requested = [];
