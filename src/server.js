@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { refreshAll } from './crawler.js';
+import { collectLatest } from './latest.js';
 import { loadItems, loadMeta, searchItems } from './store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,10 @@ async function readBody(req) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === 'GET' && url.pathname === '/api/latest') {
+      const baseline = JSON.parse(await fs.readFile(path.join(PUBLIC, 'data', 'baseline.json'), 'utf8'));
+      return json(res, 200, await collectLatest({ baselines: baseline.sources }));
+    }
     if (req.method === 'POST' && url.pathname === '/api/search') {
       const { q = '', category = '全部', refresh: shouldRefresh = true } = await readBody(req);
       const refresh = shouldRefresh === false ? { results: [], errors: [] } : await refreshAll({ maxPages: 20 });

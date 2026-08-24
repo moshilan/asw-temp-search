@@ -46,3 +46,16 @@ npm run init:all
 ## 当前限制
 
 已在当前环境使用 `Accept-Language: zh-CN,zh;q=0.9,en;q=0.8` 实测三个来源均返回 HTTP 200，且每个首页可解析 100 条资源。网站如改变页面结构、访问策略或停止提供公开列表页，刷新和初始化可能失败；发生时保留已有索引继续搜索。
+
+## Cloudflare Workers静态部署
+
+Cloudflare版本保留本地Node服务，同时将完整索引作为静态资源部署。先在已完成初始化的本地目录执行：
+
+```bash
+npm run build:static-index
+npx wrangler deploy
+```
+
+`public/data/`会生成耽美、言情、男生三份静态索引和`baseline.json`。浏览器只下载当前所选分类的索引，全部分类才下载三份；搜索在浏览器本地完成。`/api/latest`由Worker或本地Node服务器请求公开列表页，带中文`Accept-Language`，遇到静态基线hash即停止，并仅返回部署后新增的元数据。返回数据只在本次浏览器会话中合并，不写入Cloudflare或本地索引。
+
+`wrangler.jsonc`启用了`workers.dev`，不需要自定义域名、KV、D1或R2。单次最新资源检查的外部请求总数限制为45，低于免费Worker每次50个外部子请求限制。部署前仍须在Cloudflare实际出口验证两个来源是否接受请求，以及中国大陆手机网络可访问性。
