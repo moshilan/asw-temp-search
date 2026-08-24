@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <title>小说临时搜索</title>
+</head>
+<body>
+  <main>
+    <h1>小说搜索</h1>
+    <p class="sub">输入书名、作者或任意一个关键字</p>
+    <form id="searchForm">
+      <div class="searchRow">
+        <input id="q" type="search" autocomplete="off" placeholder="输入关键字" required>
+        <button id="searchBtn" type="submit">搜索</button>
+      </div>
+      <div class="tabs" id="tabs">
+        <button type="button" data-category="all" class="active">全部</button>
+        <button type="button" data-category="yanqing">言情</button>
+        <button type="button" data-category="danmei">耽美</button>
+        <button type="button" data-category="nansheng">男生</button>
+      </div>
+    </form>
+    <div class="statusRow"><span id="status">尚未搜索</span><button type="button" id="refreshBtn" class="linkBtn">重新刷新</button></div>
+    <section id="results"></section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

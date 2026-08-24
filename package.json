@@ -1,0 +1,15 @@
+{
+  "name": "asw-temp-search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "爱书网升级期间使用的轻量临时小说搜索工具",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "init:all": "node src/init-all.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
