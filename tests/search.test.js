@@ -16,6 +16,14 @@ test('single keyword matches any part of filename', () => {
   assert.equal(searchItems(items, '  浮云素  ').length, 1);
 });
 
+test('English keyword matching is case-insensitive', () => {
+  const englishItems = [{ hash: 'english', category: '言情', name: 'Harry Potter and HP.txt' }];
+  assert.equal(searchItems(englishItems, 'harry').length, 1);
+  assert.equal(searchItems(englishItems, 'HARRY').length, 1);
+  assert.equal(searchItems(englishItems, 'hp').length, 1);
+  assert.equal(searchItems(englishItems, 'HP').length, 1);
+});
+
 test('category filters return only their selected Chinese category', () => {
   assert.deepEqual(searchItems(items, '共同关键词').map(item => item.category).sort(), ['言情', '男生', '耽美'].sort());
   assert.deepEqual(searchItems(items, '共同关键词', '言情').map(item => item.category), ['言情']);
