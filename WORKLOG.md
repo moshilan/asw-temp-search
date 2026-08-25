@@ -13,3 +13,7 @@
 ## 2026-08-25 05:17
 
 新增CloudflareWorkers静态部署版本：完整索引按分类发布，浏览器本地搜索，Worker仅补基线后的最新元数据；保留本地Node服务并提供同名/api/latest。
+
+## 2026-08-25 11:15
+
+切换为GitHubActions定时增量更新加GitHubPages纯静态搜索。页面不再搜索时刷新，Actions更新完整索引和静态分类文件。

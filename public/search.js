@@ -1,7 +1,7 @@
 export const INDEX_FILES = {
-  言情: '/data/yanqing.json',
-  耽美: '/data/danmei.json',
-  男生: '/data/nansheng.json',
+  言情: './data/yanqing.json',
+  耽美: './data/danmei.json',
+  男生: './data/nansheng.json',
 };
 
 export function selectedCategories(category) {
@@ -18,10 +18,10 @@ export async function loadIndexes(fetchFn, category) {
   return loaded.flat();
 }
 
-export function mergeByHash(base, latest) {
-  const items = new Map(base.map(item => [item.hash, item]));
-  for (const item of latest) items.set(item.hash, item);
-  return [...items.values()];
+export async function loadIndexMeta(fetchFn) {
+  const response = await fetchFn('./data/meta.json');
+  if (!response.ok) throw new Error('无法加载索引更新时间');
+  return response.json();
 }
 
 export function searchLocal(items, keyword, category = '全部') {

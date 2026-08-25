@@ -1,0 +1,46 @@
+{
+  "lastRefreshAt": "2026-08-25T03:14:02.899Z",
+  "sources": {
+    "danmei": {
+      "lastRefreshAt": "2026-08-25T03:13:59.310Z",
+      "pagesRead": 1,
+      "added": 43,
+      "totalPages": 475
+    },
+    "yanqing": {
+      "lastRefreshAt": "2026-08-25T03:14:01.739Z",
+      "pagesRead": 1,
+      "added": 47,
+      "totalPages": 348
+    },
+    "nansheng": {
+      "lastRefreshAt": "2026-08-25T03:14:02.899Z",
+      "pagesRead": 1,
+      "added": 1,
+      "totalPages": 15
+    }
+  },
+  "initialization": {
+    "sources": {
+      "danmei": {
+        "nextPage": 476,
+        "totalPages": 475,
+        "completed": true,
+        "updatedAt": "2026-08-24T20:27:12.497Z"
+      },
+      "yanqing": {
+        "nextPage": 349,
+        "totalPages": 348,
+        "completed": true,
+        "updatedAt": "2026-08-24T20:37:04.783Z"
+      },
+      "nansheng": {
+        "nextPage": 16,
+        "totalPages": 15,
+        "completed": true,
+        "updatedAt": "2026-08-24T20:37:29.193Z"
+      }
+    }
+  },
+  "initializedAt": "2026-08-24T20:37:29.193Z"
+}

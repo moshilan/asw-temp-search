@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "test": "node --test",
     "init:all": "node src/init-all.js",
-    "build:static-index": "node scripts/build-static-index.js"
+    "build:static-index": "node scripts/build-static-index.js",
+    "update:index": "node scripts/update-index.js"
   },
   "engines": {
     "node": ">=20"
