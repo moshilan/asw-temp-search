@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { normalizeUploadedAt } from '../src/parser.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const STATIC_CHUNK_SIZE = 4000;
@@ -20,7 +21,7 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   await removePreviousChunks(output);
   const counts = {}; const manifestCategories = {}; let maxChunkItems = 0;
   for (const { id, label, chunked } of categories) {
-    const items = input.filter(item => item.category === label);
+    const items = input.filter(item => item.category === label).map(item => ({ ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, sourceMeta.lastRefreshAt) }));
     if (!items.length) throw new Error(`缺少${label}索引`);
     counts[label] = items.length;
     const files = [];

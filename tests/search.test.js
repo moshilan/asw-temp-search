@@ -51,3 +51,9 @@ test('merge deduplicates by hash', () => {
   assert.equal(mergeItems(items, [{...items[0], name:'updated'}]).length, 3);
   assert.equal(mergeItems(items, [{...items[0], category:'言情', name:'updated'}]).length, 3);
 });
+
+test('full dates sort across years in descending order', () => {
+  const dated = [{category:'言情',name:'x',uploadedAt:'2025-12-31 23:59'},{category:'言情',name:'x',uploadedAt:'2026-01-01 00:01'}];
+  assert.equal(searchItems(dated, 'x')[0].uploadedAt, '2026-01-01 00:01');
+});
+
