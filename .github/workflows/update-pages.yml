@@ -1,4 +1,4 @@
-# Re-register workflow after enabling GitHub Actions.
+# GitHub Actions workflow: update the index and deploy Pages.
 name: 更新索引并部署GitHubPages
 
 on:
