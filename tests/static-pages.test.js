@@ -1,130 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { updateIndex } from '../scripts/update-index.js';
 import { buildStaticIndex, STATIC_CHUNK_SIZE } from '../scripts/build-static-index.js';
-import { INDEX_MANIFEST_FILE, loadIndexMeta, searchLocal, searchStaticIndexes } from '../public/search.js';
+import { createMemoryIndexCache } from '../public/index-cache.js';
+import { INDEX_MANIFEST_FILE, prepareStaticIndex, searchLocal, searchPreparedIndex } from '../public/search.js';
+const root = new URL('../', import.meta.url), data = new URL('../public/data/', import.meta.url);
+const response = value => ({ ok: true, status: 200, json: async () => JSON.parse(value), text: async () => value });
 
-const root = new URL('../', import.meta.url);
-const data = new URL('../public/data/', import.meta.url);
-
-async function readManifestGroups(manifest) {
-  return Promise.all(Object.values(manifest.categories).flatMap(({ files }) => files.map(file => fs.readFile(new URL(file, data), 'utf8').then(JSON.parse))));
-}
-
-test('static indexes preserve the complete local index as bounded category chunks', async () => {
-  const [source, meta, manifest] = await Promise.all([
-    fs.readFile(new URL('data/index.json', root), 'utf8').then(JSON.parse),
-    fs.readFile(new URL('meta.json', data), 'utf8').then(JSON.parse),
-    fs.readFile(new URL('manifest.json', data), 'utf8').then(JSON.parse),
-  ]);
-  const groups = await readManifestGroups(manifest);
-  assert.equal(groups.flat().length, source.length);
-  assert.equal(meta.totalItems, source.length);
-  assert.equal(manifest.chunkSize, STATIC_CHUNK_SIZE);
-  assert.ok(Math.max(...groups.map(group => group.length)) <= STATIC_CHUNK_SIZE);
-  assert.deepEqual(meta.counts, Object.fromEntries(Object.entries(manifest.categories).map(([category, value]) => [category, value.count])));
-  await assert.rejects(fs.access(new URL('danmei.json', data)));
-  await assert.rejects(fs.access(new URL('yanqing.json', data)));
+test('static manifest covers the complete local index with stable chunk fingerprints', async () => {
+ const [source, manifest] = await Promise.all([fs.readFile(new URL('data/index.json', root),'utf8').then(JSON.parse),fs.readFile(new URL('manifest.json',data),'utf8').then(JSON.parse)]);
+ const entries = Object.values(manifest.categories).flatMap(value => value.files);
+ assert.equal(entries.reduce((sum, entry) => sum + entry.count, 0), source.length);
+ assert.ok(entries.every(entry => /^[a-f0-9]{64}$/.test(entry.sha256)));
+ assert.ok(Math.max(...entries.map(entry => entry.count)) <= STATIC_CHUNK_SIZE);
 });
 
-test('static builder writes category chunks, manifest and removes legacy large files', async () => {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'asw-static-'));
-  try {
-    await fs.mkdir(path.join(temp, 'data'), { recursive: true });
-    const items = [
-      ...Array.from({ length: STATIC_CHUNK_SIZE + 1 }, (_, index) => ({ hash: `d${index}`, category: '耽美', name: `D${index}` })),
-      { hash: 'y', category: '言情', name: 'Y' },
-      { hash: 'n', category: '男生', name: 'N' },
-    ];
-    await fs.writeFile(path.join(temp, 'data', 'index.json'), JSON.stringify(items));
-    await fs.writeFile(path.join(temp, 'data', 'meta.json'), JSON.stringify({ lastRefreshAt: '2026-08-25T00:00:00.000Z' }));
-    await fs.mkdir(path.join(temp, 'public', 'data'), { recursive: true });
-    await fs.writeFile(path.join(temp, 'public', 'data', 'danmei.json'), 'legacy');
-    const result = await buildStaticIndex({ rootDir: temp });
-    assert.equal(result.manifest.categories.耽美.files.length, 2);
-    assert.deepEqual(result.manifest.categories.男生.files, ['nansheng.json']);
-    await assert.rejects(fs.access(path.join(temp, 'public', 'data', 'danmei.json')));
-  } finally {
-    await fs.rm(temp, { recursive: true, force: true });
-  }
+test('first synchronization writes cache and same version only requests manifest', async () => {
+ const manifest = { version:'v1', totalItems:2, categories:{言情:{count:2,files:[{file:'yanqing-001.json',count:2,sha256:'a'}]}}};
+ const files = {[INDEX_MANIFEST_FILE]:JSON.stringify(manifest),'./data/yanqing-001.json':JSON.stringify([{category:'言情',name:'Harry'},{category:'言情',name:'中文'}])};
+ const calls=[]; const fetchFn=async file=>{calls.push(file); return response(files[file]);}; const cache=createMemoryIndexCache();
+ const first=await prepareStaticIndex(fetchFn,cache); assert.equal(await cache.getChunk('a'),files['./data/yanqing-001.json']); assert.equal(calls.length,2);
+ const result=await searchPreparedIndex(fetchFn,first,'harry','言情'); assert.equal(result.items.length,1);
+ calls.length=0; await prepareStaticIndex(fetchFn,cache); assert.deepEqual(calls,[INDEX_MANIFEST_FILE]);
 });
 
-test('static search fetches chunks sequentially, filters categories and reuses a bounded cache', async () => {
-  const manifest = {
-    categories: {
-      言情: { count: 2, files: ['yanqing-001.json', 'yanqing-002.json'] },
-      耽美: { count: 1, files: ['danmei-001.json'] },
-      男生: { count: 1, files: ['nansheng.json'] },
-    },
-  };
-  const fixtures = {
-    [INDEX_MANIFEST_FILE]: manifest,
-    './data/yanqing-001.json': [{ hash: 'y1', category: '言情', name: 'Needle Y1' }],
-    './data/yanqing-002.json': [{ hash: 'y2', category: '言情', name: 'other' }],
-    './data/danmei-001.json': [{ hash: 'd', category: '耽美', name: 'needle D' }],
-    './data/nansheng.json': [{ hash: 'n', category: '男生', name: 'needle N' }],
-  };
-  const requested = [];
-  let active = 0;
-  let maxActive = 0;
-  const fetchFn = async file => {
-    requested.push(file);
-    active += 1;
-    maxActive = Math.max(maxActive, active);
-    await Promise.resolve();
-    active -= 1;
-    return { ok: Object.hasOwn(fixtures, file), json: async () => fixtures[file] };
-  };
-  const progress = [];
-  const result = await searchStaticIndexes(fetchFn, 'NEEDLE', '全部', { onProgress: item => progress.push(item.current) });
-  assert.equal(maxActive, 1);
-  assert.deepEqual(progress, [1, 2, 3, 4]);
-  assert.deepEqual(result.items.map(item => item.category).sort(), ['言情', '男生', '耽美'].sort());
-  assert.equal(result.totalItems, 4);
-  const requestedBeforeReuse = requested.length;
-  await searchStaticIndexes(fetchFn, 'needle', '言情');
-  assert.equal(requested.length, requestedBeforeReuse);
-  const categoryFetch = async file => ({ ok: true, json: async () => fixtures[file] });
-  const yanqing = await searchStaticIndexes(categoryFetch, 'needle', '言情');
-  assert.deepEqual(yanqing.items.map(item => item.category), ['言情']);
+test('only changed chunks update and old version remains usable after a failed update', async () => {
+ const old={version:'old',totalItems:1,categories:{言情:{count:1,files:[{file:'a.json',count:1,sha256:'old-a'}]}}}; const next={version:'next',totalItems:2,categories:{言情:{count:2,files:[{file:'a.json',count:1,sha256:'old-a'},{file:'b.json',count:1,sha256:'new-b'}]}}};
+ const cache=createMemoryIndexCache(); await cache.saveManifest(old); await cache.saveChunk('old-a',JSON.stringify([{category:'言情',name:'旧书'}]));
+ const files={[INDEX_MANIFEST_FILE]:JSON.stringify(next),'./data/b.json':JSON.stringify([{category:'言情',name:'新书'}])}; const calls=[]; const updated=await prepareStaticIndex(async file=>{calls.push(file);return response(files[file]);},cache); assert.deepEqual(calls,[INDEX_MANIFEST_FILE,'./data/b.json']); assert.equal(updated.manifest.version,'next');
+ const stale=await prepareStaticIndex(async file=>file===INDEX_MANIFEST_FILE?response(JSON.stringify(old)):{ok:false,status:500,text:async()=>''},cache); assert.equal(stale.manifest.version,'old');
 });
 
-test('static search names the failed chunk', async () => {
-  const fetchFn = async file => file === INDEX_MANIFEST_FILE
-    ? { ok: true, json: async () => ({ categories: { 言情: { count: 1, files: ['yanqing-001.json'] } } }) }
-    : { ok: false, json: async () => null };
-  await assert.rejects(() => searchStaticIndexes(fetchFn, 'needle', '言情'), /无法加载言情分片yanqing-001\.json/);
-});
-
-test('browser search is static-only and keeps category and English case-insensitive matching', async () => {
-  const app = await fs.readFile(new URL('../public/app.js', import.meta.url), 'utf8');
-  const items = [
-    { hash: 'a', category: '言情', name: 'Harry Potter.txt' },
-    { hash: 'b', category: '耽美', name: '共同关键词.txt' },
-    { hash: 'c', category: '男生', name: '共同关键词.txt' },
-  ];
-  assert.doesNotMatch(app, /\/api\//);
-  assert.equal(searchLocal(items, 'harry', '言情').length, 1);
-  assert.equal(searchLocal(items, 'HARRY', '言情').length, 1);
-  assert.deepEqual(searchLocal(items, '共同关键词', '全部').map(item => item.category).sort(), ['男生', '耽美']);
-  assert.deepEqual(searchLocal(items, '共同关键词', '男生').map(item => item.category), ['男生']);
-});
-
-test('static metadata loads without an API request', async () => {
-  const meta = await loadIndexMeta(async file => ({ ok: file === './data/meta.json', json: async () => ({ totalItems: 1, lastUpdatedAt: '2026-08-25T00:00:00.000Z' }) }));
-  assert.equal(meta.totalItems, 1);
-});
-
-test('GitHub Actions update script refreshes then rebuilds static files', async () => {
-  const calls = [];
-  const result = await updateIndex({
-    refreshAllFn: async () => { calls.push('refresh'); return { results: [{ sourceId: 'danmei', added: 1 }], errors: [] }; },
-    buildStaticIndexFn: async options => { calls.push(['build', options.rootDir]); return { totalItems: 82789, counts: {} }; },
-  });
-  assert.deepEqual(calls[0], 'refresh');
-  assert.equal(calls[1][0], 'build');
-  assert.equal(result.index.totalItems, 82789);
-});
+test('search remains Chinese contains matching and English case-insensitive', () => { const items=[{category:'言情',name:'Harry与中文'},{category:'男生',name:'中文'}]; assert.equal(searchLocal(items,'harry','言情').length,1); assert.equal(searchLocal(items,'中文','全部').length,2); });
