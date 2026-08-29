@@ -14,7 +14,7 @@
     <p class="sub">输入书名、作者或任意一个关键字</p>
     <form id="searchForm">
       <div class="searchRow">
-        <input id="q" type="search" autocomplete="off" placeholder="输入关键字" required>
+        <input id="q" type="search" autocomplete="off" placeholder="输入关键字">
         <button id="searchBtn" type="submit">搜索</button>
       </div>
       <div class="tabs" id="tabs">
@@ -23,7 +23,7 @@
         <button type="button" data-category="耽美">耽美</button>
         <button type="button" data-category="男生">男生</button>
       </div>
-      <div class="tabs"><button type="button" id="correctionsOnly" aria-pressed="false">只看分类纠正</button></div>
+      <div class="tabs"><button type="button" id="suspectedMode" aria-pressed="false">查看疑似错区</button></div>
     </form>
     <div class="statusRow"><span id="status">正在读取数据更新时间…</span></div>
     <section id="results"></section>
