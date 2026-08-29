@@ -1,22 +1,22 @@
 {
-  "lastRefreshAt": "2026-08-29T16:09:30.506Z",
+  "lastRefreshAt": "2026-08-29T16:29:32.783Z",
   "sources": {
     "danmei": {
-      "lastRefreshAt": "2026-08-29T16:09:28.903Z",
+      "lastRefreshAt": "2026-08-29T16:29:30.974Z",
       "pagesRead": 1,
-      "added": 34,
+      "added": 2,
       "totalPages": 480
     },
     "yanqing": {
-      "lastRefreshAt": "2026-08-29T16:09:29.853Z",
+      "lastRefreshAt": "2026-08-29T16:29:32.033Z",
       "pagesRead": 1,
-      "added": 18,
+      "added": 1,
       "totalPages": 352
     },
     "nansheng": {
-      "lastRefreshAt": "2026-08-29T16:09:30.506Z",
+      "lastRefreshAt": "2026-08-29T16:29:32.783Z",
       "pagesRead": 1,
-      "added": 2,
+      "added": 0,
       "totalPages": 16
     }
   },
