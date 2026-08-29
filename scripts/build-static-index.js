@@ -16,12 +16,17 @@ async function removePreviousChunks(output) {
 export async function buildStaticIndex({ rootDir = root } = {}) {
   const input = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'index.json'), 'utf8'));
   const sourceMeta = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'meta.json'), 'utf8'));
+  const tagState = await fs.readFile(path.join(rootDir, 'data', 'tag-classifications.json'), 'utf8').then(JSON.parse).catch(error => error.code === 'ENOENT' ? { records: {} } : Promise.reject(error));
+  const tagRecords = tagState.records || {};
   const output = path.join(rootDir, 'public', 'data');
   await fs.mkdir(output, { recursive: true });
   await removePreviousChunks(output);
   const counts = {}; const manifestCategories = {}; let maxChunkItems = 0;
   for (const { id, label, chunked } of categories) {
-    const items = input.filter(item => item.category === label).map(item => ({ ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, sourceMeta.lastRefreshAt) }));
+    const items = input.filter(item => item.category === label).map(item => {
+      const record = tagRecords[item.hash];
+      return { ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, sourceMeta.lastRefreshAt), ...(Array.isArray(record?.downloadUrls) && record.downloadUrls.length ? { downloadUrls: record.downloadUrls } : {}) };
+    });
     if (!items.length) throw new Error(`缺少${label}索引`);
     counts[label] = items.length;
     const files = [];

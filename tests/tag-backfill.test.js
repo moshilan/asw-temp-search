@@ -10,6 +10,7 @@ import {
   createSuccessRecord,
   loadTagState,
   parseTagVotes,
+  parseDownloadUrls,
   resolveTagCategory,
   selectBackfillItems,
 } from '../src/tag-backfill.js';
@@ -29,6 +30,10 @@ test('tag parser extracts only the four relevant raw vote counts', () => {
   assert.deepEqual(parseTagVotes(tagHtml({ yanqing: 2, danmei: 3, nansheng: 4, gl: 5 })), { 言情: 2, 耽美: 3, 男生: 4, GL: 5 });
 });
 
+test('download parser keeps ordered HTTPS download links and ignores other anchors', () => {
+  const html = `<a href="/down.php/first.txt">下载1</a><a href="https://example.com/read">阅读</a><a href="https://cdn.example.com/a.txt">下载2</a><a href="/down.php/first.txt">重复</a>`;
+  assert.deepEqual(parseDownloadUrls(html, 'https://source.example/file.php?hash=x'), ['https://source.example/down.php/first.txt', 'https://cdn.example.com/a.txt']);
+});
 test('tag resolution preserves the original category for no votes and ties', () => {
   assert.deepEqual(resolveTagCategory('言情', { 言情: 0, 耽美: 0, 男生: 0, GL: 0 }), { resolvedCategory: '言情', votes: { 言情: 0, 耽美: 0, 男生: 0 }, noRelevantTags: true, tied: false });
   assert.deepEqual(resolveTagCategory('男生', { 言情: 1, 耽美: 0, 男生: 1, GL: 0 }), { resolvedCategory: '男生', votes: { 言情: 1, 耽美: 0, 男生: 1 }, noRelevantTags: false, tied: true });
@@ -56,7 +61,7 @@ test('journal saves each completed item, resumes by hash, and records failures f
       fetchTagHtmlFn: async item => {
         fetches++;
         if (item.hash === 'danmei') throw new Error('temporary network failure');
-        return item.hash === 'yanqing' ? tagHtml({ yanqing: 0, danmei: 2, gl: 1 }) : tagHtml();
+        return item.hash === 'yanqing' ? `${tagHtml({ yanqing: 0, danmei: 2, gl: 1 })}<a href="https://cdn.example/yanqing.txt">下载</a>` : tagHtml();
       },
       now: () => '2026-08-29T00:00:00.000Z',
     });
@@ -64,6 +69,7 @@ test('journal saves each completed item, resumes by hash, and records failures f
     assert.equal(fetches, 3);
     const saved = await loadTagState({ dataDir });
     assert.equal(saved.records.yanqing.resolvedCategory, '耽美');
+    assert.deepEqual(saved.records.yanqing.downloadUrls, ['https://cdn.example/yanqing.txt']);
     assert.equal(saved.records.danmei.retry.status, 'pending');
 
     const second = await backfillDetailTags({

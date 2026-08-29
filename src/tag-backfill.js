@@ -84,6 +84,18 @@ export function parseTagVotes(html) {
   return votes;
 }
 
+export function parseDownloadUrls(html, baseUrl) {
+  const urls = [];
+  for (const [, href] of html.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)) {
+    let url;
+    try { url = new URL(href, baseUrl); } catch { continue; }
+    if (url.protocol !== 'https:') continue;
+    if (!/(?:down(?:load)?\.php(?:\/|\?|$)|\.txt(?:[?#]|$))/i.test(url)) continue;
+    if (!urls.includes(url.href)) urls.push(url.href);
+  }
+  return urls;
+}
+
 export function resolveTagCategory(originalCategory, tagVotes) {
   const votes = {
     言情: tagVotes.言情,
@@ -127,7 +139,7 @@ function attemptsFor(previous) {
   return (previous?.retry?.attempts || 0) + 1;
 }
 
-export function createSuccessRecord(item, tagVotes, { previous, checkedAt }) {
+export function createSuccessRecord(item, tagVotes, { previous, checkedAt, downloadUrls = previous?.downloadUrls || [] } = {}) {
   const result = resolveTagCategory(item.category, tagVotes);
   return {
     hash: item.hash,
@@ -139,6 +151,7 @@ export function createSuccessRecord(item, tagVotes, { previous, checkedAt }) {
     error: null,
     retry: { status: 'completed', attempts: attemptsFor(previous), lastAttemptAt: checkedAt },
     classification: { noRelevantTags: result.noRelevantTags, tied: result.tied, votes: result.votes },
+    downloadUrls: Array.isArray(downloadUrls) ? downloadUrls : [],
   };
 }
 
@@ -152,6 +165,7 @@ export function createFailureRecord(item, error, { previous, checkedAt }) {
     parserVersion: TAG_PARSER_VERSION,
     error: error.message,
     retry: { status: 'pending', attempts: attemptsFor(previous), lastAttemptAt: checkedAt },
+    downloadUrls: Array.isArray(previous?.downloadUrls) ? previous.downloadUrls : [],
   };
 }
 
@@ -202,8 +216,10 @@ export async function backfillDetailTags({
     const previous = state.records[item.hash];
     const checkedAt = now();
     try {
-      const tagVotes = parseTagVotes(await fetchTagHtmlFn(item));
-      const record = createSuccessRecord(item, tagVotes, { previous, checkedAt });
+      const detailHtml = await fetchTagHtmlFn(item);
+      const tagVotes = parseTagVotes(detailHtml);
+      const downloadUrls = parseDownloadUrls(detailHtml, item.url);
+      const record = createSuccessRecord(item, tagVotes, { previous, checkedAt, downloadUrls });
       state.records[item.hash] = record;
       await appendTagRecordFn(record);
       summary.succeeded++;
