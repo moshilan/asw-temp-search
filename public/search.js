@@ -39,4 +39,9 @@ export async function searchPreparedIndex(fetchFn, prepared, keyword, category =
   }
   return { items: found.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')), totalItems: selectedCategories(category, prepared.manifest).reduce((sum, name) => sum + prepared.manifest.categories[name].count, 0), chunksTotal: chunks.length };
 }
+export function filterDownloadable(items, keyword = '', category = '全部') {
+  const downloadable = items.filter(item => Array.isArray(item.downloadUrls) && item.downloadUrls.length > 0);
+  if (!String(keyword).trim()) return downloadable.filter(item => category === '全部' || item.category === category).sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
+  return searchLocal(downloadable, keyword, category);
+}
 export function searchLocal(items, keyword, category = '全部') { const q = normalizeKeyword(keyword); return q ? items.filter(item => (category === '全部' || item.category === category) && matches(item, q)).sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || '')) : []; }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { buildStaticIndex, STATIC_CHUNK_SIZE } from '../scripts/build-static-index.js';
 import { createMemoryIndexCache } from '../public/index-cache.js';
-import { INDEX_MANIFEST_FILE, prepareStaticIndex, searchLocal, searchPreparedIndex } from '../public/search.js';
+import { filterDownloadable, INDEX_MANIFEST_FILE, prepareStaticIndex, searchLocal, searchPreparedIndex } from '../public/search.js';
 const root = new URL('../', import.meta.url), data = new URL('../public/data/', import.meta.url);
 const response = value => ({ ok: true, status: 200, json: async () => JSON.parse(value), text: async () => value });
 
@@ -32,3 +32,9 @@ test('only changed chunks update and old version remains usable after a failed u
 });
 
 test('search remains Chinese contains matching and English case-insensitive', () => { const items=[{category:'言情',name:'Harry与中文'},{category:'男生',name:'中文'}]; assert.equal(searchLocal(items,'harry','言情').length,1); assert.equal(searchLocal(items,'中文','全部').length,2); });
+test('downloadable filter supports empty keyword and category selection', () => {
+ const items=[{hash:'y',category:'言情',name:'Harry下载',uploadedAt:'2026-01-01',downloadUrls:['https://cdn/y.txt']},{hash:'d',category:'耽美',name:'Harry无链接',uploadedAt:'2026-01-02'},{hash:'n',category:'男生',name:'HP下载',uploadedAt:'2026-01-03',downloadUrls:['https://cdn/n.txt']}];
+ assert.deepEqual(filterDownloadable(items,'','全部').map(item=>item.hash), ['n','y']);
+ assert.deepEqual(filterDownloadable(items,'harry','言情').map(item=>item.hash), ['y']);
+ assert.deepEqual(filterDownloadable(items,'hp','男生').map(item=>item.hash), ['n']);
+});
