@@ -9,7 +9,8 @@
     "test": "node --test",
     "init:all": "node src/init-all.js",
     "build:static-index": "node scripts/build-static-index.js",
-    "update:index": "node scripts/update-index.js"
+    "update:index": "node scripts/update-index.js",
+    "backfill:detail": "node scripts/backfill-detail-tags.js"
   },
   "engines": {
     "node": ">=20"

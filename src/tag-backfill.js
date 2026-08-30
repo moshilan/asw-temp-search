@@ -196,6 +196,70 @@ function emptySummary(total) {
   return { selected: total, succeeded: 0, failed: 0, noRelevantTags: 0, corrected: 0, ties: 0, transitions: {}, elapsedMs: 0, averageMs: 0 };
 }
 
+export const DOWNLOAD_PARSER_VERSION = 'download-v1';
+
+export async function fetchDownloadHtml(item, { fetchFn = fetch } = {}) {
+  if (!item?.url) throw new Error('资源缺少详情页URL');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetchFn(item.url, { headers: DEFAULT_HEADERS, signal: controller.signal, redirect: 'follow' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const html = await response.text();
+    if (html.includes('浏览器不支持') || html.includes('操作系统语言设置非中文')) throw new Error('详情站点拒绝请求：中文Accept-Language未被接受');
+    return html;
+  } finally { clearTimeout(timer); }
+}
+
+export function selectMissingDownloadItems(items, records, { limit = 1000 } = {}) {
+  const selected = [];
+  for (const item of items) {
+    const record = records[item.hash];
+    if (!record || (Array.isArray(record.downloadUrls) && record.downloadUrls.length)) continue;
+    selected.push(item);
+    if (selected.length >= limit) break;
+  }
+  return selected;
+}
+
+export async function backfillMissingDownloadUrls({
+  items,
+  limit = 1000,
+  delayMs = 800,
+  fetchDownloadHtmlFn = fetchDownloadHtml,
+  loadTagStateFn = loadTagState,
+  appendTagRecordFn = appendTagRecord,
+  compactTagStateFn = compactTagState,
+  now = () => new Date().toISOString(),
+  clock = () => Date.now(),
+} = {}) {
+  const state = await loadTagStateFn();
+  const selected = selectMissingDownloadItems(items, state.records, { limit });
+  const summary = { selected: selected.length, succeeded: 0, failed: 0, totalUrls: 0, elapsedMs: 0, averageMs: 0 };
+  const startedAt = clock();
+  for (const item of selected) {
+    const previous = state.records[item.hash];
+    const checkedAt = now();
+    try {
+      const urls = parseDownloadUrls(await fetchDownloadHtmlFn(item), item.url);
+      const record = { ...previous, downloadUrls: urls, downloadCheckedAt: checkedAt, downloadParserVersion: DOWNLOAD_PARSER_VERSION, downloadError: null, downloadRetry: { status: 'completed', attempts: (previous.downloadRetry?.attempts || 0) + 1, lastAttemptAt: checkedAt } };
+      state.records[item.hash] = record;
+      await appendTagRecordFn(record);
+      summary.succeeded++;
+      summary.totalUrls += urls.length;
+    } catch (error) {
+      const record = { ...previous, downloadUrls: Array.isArray(previous.downloadUrls) ? previous.downloadUrls : [], downloadCheckedAt: checkedAt, downloadParserVersion: DOWNLOAD_PARSER_VERSION, downloadError: error.message, downloadRetry: { status: 'pending', attempts: (previous.downloadRetry?.attempts || 0) + 1, lastAttemptAt: checkedAt } };
+      state.records[item.hash] = record;
+      await appendTagRecordFn(record);
+      summary.failed++;
+    }
+    if (delayMs) await sleep(delayMs);
+  }
+  await compactTagStateFn(state);
+  summary.elapsedMs = clock() - startedAt;
+  summary.averageMs = selected.length ? summary.elapsedMs / selected.length : 0;
+  return summary;
+}
 export async function backfillDetailTags({
   items,
   limit = 1000,

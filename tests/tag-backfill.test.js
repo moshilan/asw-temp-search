@@ -6,6 +6,8 @@ import path from 'node:path';
 import {
   appendTagRecord,
   backfillDetailTags,
+  backfillMissingDownloadUrls,
+  selectMissingDownloadItems,
   compactTagState,
   createSuccessRecord,
   loadTagState,
@@ -33,6 +35,31 @@ test('tag parser extracts only the four relevant raw vote counts', () => {
 test('download parser keeps ordered HTTPS download links and ignores other anchors', () => {
   const html = `<a href="/down.php/first.txt">下载1</a><a href="https://example.com/read">阅读</a><a href="https://cdn.example.com/a.txt">下载2</a><a href="/down.php/first.txt">重复</a>`;
   assert.deepEqual(parseDownloadUrls(html, 'https://source.example/file.php?hash=x'), ['https://source.example/down.php/first.txt', 'https://cdn.example.com/a.txt']);
+});
+test('download-only selection includes only existing records missing URLs', () => {
+  const records = { yanqing: { tagVotes: { 言情: 1 } }, danmei: { downloadUrls: ['https://cdn.example/d.txt'] } };
+  assert.deepEqual(selectMissingDownloadItems(items, records, { limit: 10 }).map(item => item.hash), ['yanqing']);
+});
+
+test('download-only backfill preserves tag classification and resumes by hash', async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'asw-downloads-'));
+  try {
+    const existing = { ...items[0], tagVotes: { 言情: 2 }, resolvedCategory: '言情', error: null };
+    const state = { parserVersion: 'detail-tag-v1', records: { yanqing: existing } };
+    const fetches = [];
+    const summary = await backfillMissingDownloadUrls({ items, limit: 1, delayMs: 0,
+      loadTagStateFn: async () => state,
+      appendTagRecordFn: async record => { state.records[record.hash] = record; },
+      compactTagStateFn: async next => { state.records = next.records; },
+      fetchDownloadHtmlFn: async item => { fetches.push(item.hash); return '<a href="https://cdn.example/one.txt">下载</a>'; },
+      now: () => '2026-08-30T00:00:00.000Z',
+    });
+    assert.deepEqual(summary, { selected: 1, succeeded: 1, failed: 0, totalUrls: 1, elapsedMs: 0, averageMs: 0 });
+    assert.deepEqual(fetches, ['yanqing']);
+    assert.deepEqual(state.records.yanqing.tagVotes, { 言情: 2 });
+    assert.equal(state.records.yanqing.resolvedCategory, '言情');
+    assert.deepEqual(state.records.yanqing.downloadUrls, ['https://cdn.example/one.txt']);
+  } finally { await fs.rm(dataDir, { recursive: true, force: true }); }
 });
 test('tag resolution preserves the original category for no votes and ties', () => {
   assert.deepEqual(resolveTagCategory('言情', { 言情: 0, 耽美: 0, 男生: 0, GL: 0 }), { resolvedCategory: '言情', votes: { 言情: 0, 耽美: 0, 男生: 0 }, noRelevantTags: true, tied: false });
