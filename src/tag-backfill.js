@@ -84,18 +84,31 @@ export function parseTagVotes(html) {
   return votes;
 }
 
-export function parseDownloadUrls(html, baseUrl) {
-  const urls = [];
-  for (const [, href] of html.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)) {
+const DOWNLOAD_HOST_PRIORITY = {
+  言情: ['yq.downshu123.com', 'yq.downshu321.com', 'nv.aishu995.com'],
+  耽美: ['dm.downshu123.com', 'dm.downshu321.com', 'w.aishu995.com'],
+  男生: ['yq.downshu123.com', 'yq.downshu321.com', 'nv.aishu995.com'],
+};
+
+export function cleanDownloadUrls(urls, category) {
+  const valid = [];
+  for (const href of Array.isArray(urls) ? urls : []) {
     let url;
-    try { url = new URL(href, baseUrl); } catch { continue; }
-    if (url.protocol !== 'https:') continue;
-    if (!/(?:down(?:load)?\.php(?:\/|\?|$)|\.txt(?:[?#]|$))/i.test(url)) continue;
-    if (!urls.includes(url.href)) urls.push(url.href);
+    try { url = new URL(href); } catch { continue; }
+    if (url.protocol !== 'https:' || !/\/down\.php\//i.test(url.pathname)) continue;
+    if (!valid.includes(url.href)) valid.push(url.href);
   }
-  return urls;
+  const priority = DOWNLOAD_HOST_PRIORITY[category] || [];
+  return valid.map((url, index) => ({ url, index, rank: priority.indexOf(new URL(url).hostname.toLowerCase()) })).sort((a, b) => (a.rank < 0 ? 999 : a.rank) - (b.rank < 0 ? 999 : b.rank) || a.index - b.index).map(item => item.url);
 }
 
+export function parseDownloadUrls(html, baseUrl, category) {
+  const urls = [];
+  for (const [, href] of html.matchAll(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)) {
+    try { urls.push(new URL(href, baseUrl).href); } catch { /* ignore malformed links */ }
+  }
+  return cleanDownloadUrls(urls, category);
+}
 export function resolveTagCategory(originalCategory, tagVotes) {
   const votes = {
     言情: tagVotes.言情,
@@ -222,6 +235,28 @@ export function selectMissingDownloadItems(items, records, { limit = 1000 } = {}
   return selected;
 }
 
+export async function cleanExistingDownloadUrls({
+  items,
+  state,
+  appendTagRecordFn = appendTagRecord,
+  now = () => new Date().toISOString(),
+} = {}) {
+  const itemByHash = new Map(items.map(item => [item.hash, item]));
+  let cleaned = 0;
+  let alreadyValid = 0;
+  for (const record of Object.values(state.records || {})) {
+    const item = itemByHash.get(record.hash);
+    if (!item || !Array.isArray(record.downloadUrls)) continue;
+    const urls = cleanDownloadUrls(record.downloadUrls, record.originalCategory || item.category);
+    if (JSON.stringify(urls) === JSON.stringify(record.downloadUrls)) { alreadyValid++; continue; }
+    const checkedAt = now();
+    const updated = { ...record, downloadUrls: urls, downloadCheckedAt: checkedAt, downloadParserVersion: DOWNLOAD_PARSER_VERSION, downloadError: null };
+    state.records[record.hash] = updated;
+    await appendTagRecordFn(updated);
+    cleaned++;
+  }
+  return { cleaned, alreadyValid };
+}
 export async function backfillMissingDownloadUrls({
   items,
   limit = 1000,
@@ -234,14 +269,15 @@ export async function backfillMissingDownloadUrls({
   clock = () => Date.now(),
 } = {}) {
   const state = await loadTagStateFn();
+  const cleaning = await cleanExistingDownloadUrls({ items, state, appendTagRecordFn, now });
   const selected = selectMissingDownloadItems(items, state.records, { limit });
-  const summary = { selected: selected.length, succeeded: 0, failed: 0, totalUrls: 0, elapsedMs: 0, averageMs: 0 };
+  const summary = { selected: selected.length, cleaned: cleaning.cleaned, alreadyValid: cleaning.alreadyValid, succeeded: 0, failed: 0, totalUrls: 0, elapsedMs: 0, averageMs: 0 };
   const startedAt = clock();
   for (const item of selected) {
     const previous = state.records[item.hash];
     const checkedAt = now();
     try {
-      const urls = parseDownloadUrls(await fetchDownloadHtmlFn(item), item.url);
+      const urls = parseDownloadUrls(await fetchDownloadHtmlFn(item), item.url, item.category);
       const record = { ...previous, downloadUrls: urls, downloadCheckedAt: checkedAt, downloadParserVersion: DOWNLOAD_PARSER_VERSION, downloadError: null, downloadRetry: { status: 'completed', attempts: (previous.downloadRetry?.attempts || 0) + 1, lastAttemptAt: checkedAt } };
       state.records[item.hash] = record;
       await appendTagRecordFn(record);
@@ -282,7 +318,7 @@ export async function backfillDetailTags({
     try {
       const detailHtml = await fetchTagHtmlFn(item);
       const tagVotes = parseTagVotes(detailHtml);
-      const downloadUrls = parseDownloadUrls(detailHtml, item.url);
+      const downloadUrls = parseDownloadUrls(detailHtml, item.url, item.category);
       const record = createSuccessRecord(item, tagVotes, { previous, checkedAt, downloadUrls });
       state.records[item.hash] = record;
       await appendTagRecordFn(record);

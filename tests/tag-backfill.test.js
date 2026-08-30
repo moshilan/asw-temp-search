@@ -7,6 +7,7 @@ import {
   appendTagRecord,
   backfillDetailTags,
   backfillMissingDownloadUrls,
+  cleanDownloadUrls,
   selectMissingDownloadItems,
   compactTagState,
   createSuccessRecord,
@@ -34,7 +35,11 @@ test('tag parser extracts only the four relevant raw vote counts', () => {
 
 test('download parser keeps ordered HTTPS download links and ignores other anchors', () => {
   const html = `<a href="/down.php/first.txt">下载1</a><a href="https://example.com/read">阅读</a><a href="https://cdn.example.com/a.txt">下载2</a><a href="/down.php/first.txt">重复</a>`;
-  assert.deepEqual(parseDownloadUrls(html, 'https://source.example/file.php?hash=x'), ['https://source.example/down.php/first.txt', 'https://cdn.example.com/a.txt']);
+  assert.deepEqual(parseDownloadUrls(html, 'https://source.example/file.php?hash=x'), ['https://source.example/down.php/first.txt']);
+});
+test('download parser excludes announcements and applies category host priority', () => {
+  const urls = ['https://www.asw227.com/gonggao.php?file=gonggao.txt', 'https://dm.downshu321.com/down.php/a.txt', 'https://dm.downshu123.com/down.php/a.txt', 'https://w.aishu995.com/down.php/a.txt', 'https://dm.downshu321.shop/read.php?file=file/a.txt'];
+  assert.deepEqual(cleanDownloadUrls(urls, '耽美'), ['https://dm.downshu123.com/down.php/a.txt', 'https://dm.downshu321.com/down.php/a.txt', 'https://w.aishu995.com/down.php/a.txt']);
 });
 test('download-only selection includes only existing records missing URLs', () => {
   const records = { yanqing: { tagVotes: { 言情: 1 } }, danmei: { downloadUrls: ['https://cdn.example/d.txt'] } };
@@ -51,14 +56,15 @@ test('download-only backfill preserves tag classification and resumes by hash', 
       loadTagStateFn: async () => state,
       appendTagRecordFn: async record => { state.records[record.hash] = record; },
       compactTagStateFn: async next => { state.records = next.records; },
-      fetchDownloadHtmlFn: async item => { fetches.push(item.hash); return '<a href="https://cdn.example/one.txt">下载</a>'; },
+      fetchDownloadHtmlFn: async item => { fetches.push(item.hash); return '<a href="https://cdn.example/down.php/one.txt">下载</a>'; },
       now: () => '2026-08-30T00:00:00.000Z',
+      clock: () => 0,
     });
-    assert.deepEqual(summary, { selected: 1, succeeded: 1, failed: 0, totalUrls: 1, elapsedMs: 0, averageMs: 0 });
+    assert.deepEqual(summary, { selected: 1, cleaned: 0, alreadyValid: 0, succeeded: 1, failed: 0, totalUrls: 1, elapsedMs: 0, averageMs: 0 });
     assert.deepEqual(fetches, ['yanqing']);
     assert.deepEqual(state.records.yanqing.tagVotes, { 言情: 2 });
     assert.equal(state.records.yanqing.resolvedCategory, '言情');
-    assert.deepEqual(state.records.yanqing.downloadUrls, ['https://cdn.example/one.txt']);
+    assert.deepEqual(state.records.yanqing.downloadUrls, ['https://cdn.example/down.php/one.txt']);
   } finally { await fs.rm(dataDir, { recursive: true, force: true }); }
 });
 test('tag resolution preserves the original category for no votes and ties', () => {
@@ -88,7 +94,7 @@ test('journal saves each completed item, resumes by hash, and records failures f
       fetchTagHtmlFn: async item => {
         fetches++;
         if (item.hash === 'danmei') throw new Error('temporary network failure');
-        return item.hash === 'yanqing' ? `${tagHtml({ yanqing: 0, danmei: 2, gl: 1 })}<a href="https://cdn.example/yanqing.txt">下载</a>` : tagHtml();
+        return item.hash === 'yanqing' ? `${tagHtml({ yanqing: 0, danmei: 2, gl: 1 })}<a href="https://cdn.example/down.php/yanqing.txt">下载</a>` : tagHtml();
       },
       now: () => '2026-08-29T00:00:00.000Z',
     });
@@ -96,7 +102,7 @@ test('journal saves each completed item, resumes by hash, and records failures f
     assert.equal(fetches, 3);
     const saved = await loadTagState({ dataDir });
     assert.equal(saved.records.yanqing.resolvedCategory, '耽美');
-    assert.deepEqual(saved.records.yanqing.downloadUrls, ['https://cdn.example/yanqing.txt']);
+    assert.deepEqual(saved.records.yanqing.downloadUrls, ['https://cdn.example/down.php/yanqing.txt']);
     assert.equal(saved.records.danmei.retry.status, 'pending');
 
     const second = await backfillDetailTags({
