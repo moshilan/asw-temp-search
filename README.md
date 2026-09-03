@@ -69,6 +69,8 @@ npm run backfill:detail
 npm run backfill:detail -- --download-only --limit=1000
 ```
 
+普通详情backfill默认按每批1000条连续执行，本轮最多处理10000条新的未处理记录；可用`--max-total`调整上限。连续请求异常达到阈值时会安全停止，已落盘记录保留。
+
 `downloadUrls`只保存HTTPS且路径匹配`/down.php/`的直链，并排除公告和阅读页。当前约1000条详情记录已处理，992条有真实直链，8条失败待后续重试；不代表已完成全量8万多条详情补全。下一步继续新的约1000条历史详情backfill，并观察疑似错区准确率、downloadUrls覆盖率和镜像可用性。
 
 详情标签仅用于疑似错区抽查，不改变正式原始分类筛选。日期已补全年份，按完整日期倒序显示，格式为`YYYY-MM-DD HH:mm`，没有时分时仅显示`YYYY-MM-DD`。

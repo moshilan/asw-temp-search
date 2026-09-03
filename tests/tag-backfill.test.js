@@ -17,6 +17,7 @@ import {
   resolveTagCategory,
   selectBackfillItems,
 } from '../src/tag-backfill.js';
+import { runContinuousDetailBackfill } from '../scripts/backfill-detail-tags.js';
 
 const tagHtml = ({ yanqing = 0, danmei = 0, nansheng = 0, gl = 0 } = {}) => `
   <div class="tag-btn" data-tag="耽美"><span class="tag-count">${danmei}</span></div>
@@ -123,6 +124,34 @@ test('journal saves each completed item, resumes by hash, and records failures f
   } finally {
     await fs.rm(dataDir, { recursive: true, force: true });
   }
+});
+
+test('continuous detail backfill advances in batches and stops at the configured total', async () => {
+  const calls = [];
+  const result = await runContinuousDetailBackfill({ items, batchSize: 2, maxTotal: 5, delayMs: 0,
+    backfillFn: async ({ limit }) => { calls.push(limit); return { selected: limit, succeeded: limit, failed: 0, noRelevantTags: 0, corrected: 0, ties: 0, transitions: {}, downloadUrls: limit, elapsedMs: limit }; } });
+  assert.deepEqual(calls, [2, 2, 1]);
+  assert.equal(result.selected, 5);
+  assert.equal(result.downloadUrls, 5);
+  assert.equal(result.stoppedReason, '达到本轮上限');
+});
+
+test('detail backfill stops after consecutive request failures while preserving records', async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'asw-stop-'));
+  try {
+    const result = await backfillDetailTags({ items, limit: 3, delayMs: 0, maxConsecutiveFailures: 2,
+      loadTagStateFn: () => loadTagState({ dataDir }),
+      appendTagRecordFn: record => appendTagRecord(record, { dataDir }),
+      compactTagStateFn: state => compactTagState(state, { dataDir }),
+      fetchTagHtmlFn: async () => { throw new Error('rate limited'); },
+      now: () => '2026-09-04T00:00:00.000Z',
+    });
+    assert.equal(result.selected, 3);
+    assert.equal(result.failed, 2);
+    assert.equal(result.stoppedReason, '连续2条请求失败');
+    const saved = await loadTagState({ dataDir });
+    assert.equal(Object.keys(saved.records).length, 2);
+  } finally { await fs.rm(dataDir, { recursive: true, force: true }); }
 });
 
 test('a journal entry is recoverable before snapshot compaction', async () => {

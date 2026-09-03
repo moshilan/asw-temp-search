@@ -206,7 +206,7 @@ export function selectBackfillItems(items, records, { limit = 1000, retryFailed 
 }
 
 function emptySummary(total) {
-  return { selected: total, succeeded: 0, failed: 0, noRelevantTags: 0, corrected: 0, ties: 0, transitions: {}, elapsedMs: 0, averageMs: 0 };
+  return { selected: total, succeeded: 0, failed: 0, noRelevantTags: 0, corrected: 0, ties: 0, transitions: {}, downloadUrls: 0, stoppedReason: null, elapsedMs: 0, averageMs: 0 };
 }
 
 export const DOWNLOAD_PARSER_VERSION = 'download-v1';
@@ -301,6 +301,7 @@ export async function backfillDetailTags({
   limit = 1000,
   delayMs = 800,
   retryFailed = false,
+  maxConsecutiveFailures = 5,
   fetchTagHtmlFn = fetchTagHtml,
   loadTagStateFn = loadTagState,
   appendTagRecordFn = appendTagRecord,
@@ -312,6 +313,7 @@ export async function backfillDetailTags({
   const selected = selectBackfillItems(items, state.records, { limit, retryFailed });
   const summary = emptySummary(selected.length);
   const startedAt = clock();
+  let consecutiveFailures = 0;
   for (const item of selected) {
     const previous = state.records[item.hash];
     const checkedAt = now();
@@ -323,6 +325,8 @@ export async function backfillDetailTags({
       state.records[item.hash] = record;
       await appendTagRecordFn(record);
       summary.succeeded++;
+      if (record.downloadUrls.length) summary.downloadUrls++;
+      consecutiveFailures = 0;
       if (record.classification.noRelevantTags) summary.noRelevantTags++;
       if (record.classification.tied) summary.ties++;
       if (record.resolvedCategory !== item.category) summary.corrected++;
@@ -333,6 +337,11 @@ export async function backfillDetailTags({
       state.records[item.hash] = record;
       await appendTagRecordFn(record);
       summary.failed++;
+      consecutiveFailures++;
+      if (consecutiveFailures >= maxConsecutiveFailures) {
+        summary.stoppedReason = `连续${maxConsecutiveFailures}条请求失败`;
+        break;
+      }
     }
     if (delayMs) await sleep(delayMs);
   }

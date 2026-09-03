@@ -40968,6 +40968,81 @@
         "attempts": 1,
         "lastAttemptAt": "2026-08-30T08:19:30.450Z"
       }
+    },
+    "83267a4c7e8c2dc0f9cb676fc126f071": {
+      "hash": "83267a4c7e8c2dc0f9cb676fc126f071",
+      "originalCategory": "耽美",
+      "tagVotes": null,
+      "resolvedCategory": null,
+      "checkedAt": "2026-09-03T19:15:16.462Z",
+      "parserVersion": "detail-tag-v1",
+      "error": "fetch failed",
+      "retry": {
+        "status": "pending",
+        "attempts": 1,
+        "lastAttemptAt": "2026-09-03T19:15:16.462Z"
+      },
+      "downloadUrls": []
+    },
+    "c086da20f80d9bb15365f83f62130012": {
+      "hash": "c086da20f80d9bb15365f83f62130012",
+      "originalCategory": "男生",
+      "tagVotes": null,
+      "resolvedCategory": null,
+      "checkedAt": "2026-09-03T19:15:17.338Z",
+      "parserVersion": "detail-tag-v1",
+      "error": "fetch failed",
+      "retry": {
+        "status": "pending",
+        "attempts": 1,
+        "lastAttemptAt": "2026-09-03T19:15:17.338Z"
+      },
+      "downloadUrls": []
+    },
+    "ca7b9eec3ad6e944f7ce39ba8f9ea646": {
+      "hash": "ca7b9eec3ad6e944f7ce39ba8f9ea646",
+      "originalCategory": "言情",
+      "tagVotes": null,
+      "resolvedCategory": null,
+      "checkedAt": "2026-09-03T19:15:18.146Z",
+      "parserVersion": "detail-tag-v1",
+      "error": "fetch failed",
+      "retry": {
+        "status": "pending",
+        "attempts": 1,
+        "lastAttemptAt": "2026-09-03T19:15:18.146Z"
+      },
+      "downloadUrls": []
+    },
+    "50327cf6484a4a4d9c6b0a25b41e6069": {
+      "hash": "50327cf6484a4a4d9c6b0a25b41e6069",
+      "originalCategory": "耽美",
+      "tagVotes": null,
+      "resolvedCategory": null,
+      "checkedAt": "2026-09-03T19:15:18.949Z",
+      "parserVersion": "detail-tag-v1",
+      "error": "fetch failed",
+      "retry": {
+        "status": "pending",
+        "attempts": 1,
+        "lastAttemptAt": "2026-09-03T19:15:18.949Z"
+      },
+      "downloadUrls": []
+    },
+    "4f50095f3749cbda59b4ec886fc121aa": {
+      "hash": "4f50095f3749cbda59b4ec886fc121aa",
+      "originalCategory": "男生",
+      "tagVotes": null,
+      "resolvedCategory": null,
+      "checkedAt": "2026-09-03T19:15:19.753Z",
+      "parserVersion": "detail-tag-v1",
+      "error": "fetch failed",
+      "retry": {
+        "status": "pending",
+        "attempts": 1,
+        "lastAttemptAt": "2026-09-03T19:15:19.753Z"
+      },
+      "downloadUrls": []
     }
   }
 }
