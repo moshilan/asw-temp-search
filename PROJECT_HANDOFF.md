@@ -33,8 +33,8 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 不依赖公网 Node、Worker 或用户电脑常驻。
 本地 Node 仅用于调试/维护。
 
-定时：北京时间 08:00 / 14:00 / 20:00，对应 UTC 00:00 / 06:00 / 12:00。
-工作流支持 `workflow_dispatch`。
+自动定时：当前已暂停，不再按北京时间 08:00 / 14:00 / 20:00（UTC 00:00 / 06:00 / 12:00）运行。
+工作流保留 `workflow_dispatch`，需要时手动运行；当前未启用独立详情 backfill 工作流。
 
 ## 5. 静态索引与 IndexedDB
 旧方案让手机一次加载 8 万多条，曾出现 `failed to fetch` 和长时间卡住，已废弃。
@@ -210,7 +210,7 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 如与当前仓库冲突，以 `origin/master` 为准。
 
 注意：
-- 普通 push 不一定立即部署 Pages；当前主要依赖 schedule / workflow_dispatch
+- 普通 push 不一定立即部署 Pages；当前只依赖 workflow_dispatch，自动定时已暂停
 - Actions 会自动提交索引更新，本地 push 可能被拒绝
 - 正确处理：fetch → rebase → 保留远端最新数据和本地功能修改 → 正常 push
 - 禁止 force push
