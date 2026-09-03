@@ -3514,13 +3514,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:15.425Z",
+      "downloadCheckedAt": "2026-09-03T11:23:42.138Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:15.425Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:42.138Z"
       }
     },
     "8ccdb63585bf7218409f21c4e94c45ca": {
@@ -5806,13 +5806,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:27.092Z",
+      "downloadCheckedAt": "2026-09-03T11:23:47.064Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:27.092Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:47.064Z"
       }
     },
     "1afe261c05e6b019e49afbe24392943b": {
@@ -6581,13 +6581,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:19.794Z",
+      "downloadCheckedAt": "2026-09-03T11:23:43.002Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:19.794Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:43.002Z"
       }
     },
     "534ef3a6b81df1e7c2d34f528077cc70": {
@@ -16663,13 +16663,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:21.256Z",
+      "downloadCheckedAt": "2026-09-03T11:23:43.812Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:21.256Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:43.812Z"
       }
     },
     "5ee5c7338bb8a557747fc8795d094b80": {
@@ -24531,13 +24531,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:22.270Z",
+      "downloadCheckedAt": "2026-09-03T11:23:44.626Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:22.270Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:44.626Z"
       }
     },
     "29d00b5b680aecb21f9cd7ad1e5bfc66": {
@@ -27725,13 +27725,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:24.568Z",
+      "downloadCheckedAt": "2026-09-03T11:23:45.438Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:24.568Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:45.438Z"
       }
     },
     "d3777f5ec6f20bebef608772fd4fefcc": {
@@ -35183,13 +35183,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:30.937Z",
+      "downloadCheckedAt": "2026-09-03T11:23:47.879Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:30.937Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:47.879Z"
       }
     },
     "93943b998ed3faa182260f0af685e85d": {
@@ -38541,13 +38541,13 @@
         }
       },
       "downloadUrls": [],
-      "downloadCheckedAt": "2026-08-30T09:53:26.033Z",
+      "downloadCheckedAt": "2026-09-03T11:23:46.250Z",
       "downloadParserVersion": "download-v1",
-      "downloadError": null,
+      "downloadError": "fetch failed",
       "downloadRetry": {
-        "status": "completed",
-        "attempts": 2,
-        "lastAttemptAt": "2026-08-30T09:53:26.033Z"
+        "status": "pending",
+        "attempts": 3,
+        "lastAttemptAt": "2026-09-03T11:23:46.250Z"
       }
     },
     "76eb2e12e25a920e531bd003630f70e7": {
