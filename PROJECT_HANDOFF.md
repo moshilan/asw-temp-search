@@ -77,11 +77,12 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 侧表：`data/tag-classifications.json`
 按 hash 保存原分类、四类票数、检查时间、解析版本、错误/重试状态、downloadUrls 等。
 
-历史 1000 条真实验证：
-- 成功 1000
-- 无相关标签 495
-- 并列 24
-旧“三选一”算法的 173 条纠正结论已不再作为最终分类依据。
+历史详情侧表当前已处理约1000条：
+- 标签详情记录约1000条
+- 其中992条有真实`downloadUrls`
+- 8条下载直链请求失败，已记录待后续重试
+- 无相关标签495条，并列24条
+旧“三选一”算法的纠正结论仅用于疑似错区抽查，不参与正式分类筛选。
 
 前端已有“查看疑似错区”入口：
 - 可空关键词浏览
@@ -119,11 +120,10 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 - 直接下载使用普通 `<a href>`，不 fetch TXT
 
 最近明确状态：
-- 1000 条侧表记录
-- 992 条有真实 downloadUrls
-- 8 条无直链/待重试
-- 最近明确静态索引总数约 84,761
-- 有真实 downloadUrls：992
+- 1000条侧表记录
+- 992条有真实`downloadUrls`
+- 8条无直链/待重试
+- 静态索引总数随GitHubActions增量更新，以`origin/master`为准
 
 另有“只看可直接下载”入口：
 - 可空关键词浏览
@@ -204,7 +204,8 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 - `9f053e7...` 1000 条补 downloadUrls
 - `9e4cb19...` 只看可直接下载
 - `6a5beef...` 修复公告链接误判，992 条真实直链
-- `4a35dd2...` 最近一次明确报告的 push checkpoint
+- `4a35dd2...` 详情补缺失败重试checkpoint
+- `abee075...` 项目交接文档checkpoint
 
 如与当前仓库冲突，以 `origin/master` 为准。
 
