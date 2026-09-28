@@ -1,5 +1,7 @@
 # ASW 小说资源搜索工具 — 项目迁移/交接文档
 
+> 历史交接资料：主体记录2026-09-04前后的决策、故障背景、执行样本和当时的交接建议。当前操作方式、限制与入口统一见[README.md](README.md)，核实时结合本地代码、数据文件和Git状态。本文中的旧计数、下一步和流程要求均按其阶段理解，不自动作为当前任务要求；[WORKLOG.md](WORKLOG.md)仅在追溯具体历史时按需读取。
+
 项目：`20260825-asw-temp-search`
 本地目录：`C:\db\data\codex\20260825-asw-temp-search`
 GitHub：`https://github.com/moshilan/asw-temp-search.git`
@@ -27,8 +29,8 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 - 不做多关键词、分词、拼音、AI、模糊纠错、推荐
 - 结果显示完整文件名、分类、大小、上传时间、直接下载（有直链时）、详情
 
-## 4. 正式架构
-`GitHub Actions 定时增量更新 → 构建静态索引 → GitHub Pages`
+## 4. 当时架构与更新方式
+`GitHub Actions 增量更新 → 构建静态索引 → GitHub Pages`
 
 不依赖公网 Node、Worker 或用户电脑常驻。
 本地 Node 仅用于调试/维护。
@@ -77,7 +79,7 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 侧表：`data/tag-classifications.json`
 按 hash 保存原分类、四类票数、检查时间、解析版本、错误/重试状态、downloadUrls 等。
 
-历史详情侧表当前已处理约1000条：
+截至2026-09-03的历史详情侧表样本约1000条：
 - 标签详情记录约1000条
 - 其中992条有真实`downloadUrls`
 - 8条下载直链请求失败，已记录待后续重试
@@ -119,7 +121,7 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 - 无直链：只显示“详情”
 - 直接下载使用普通 `<a href>`，不 fetch TXT
 
-最近明确状态：
+2026-09-03明确记录的阶段状态：
 - 1000条侧表记录
 - 992条有真实`downloadUrls`
 - 8条无直链/待重试
@@ -156,7 +158,7 @@ iPhone 可能出现文件名乱码：
 
 试读放弃原因：下载域名无 CORS、Range 不支持、TXT 编码不统一。
 
-## 11. 历史详情 backfill
+## 11. 历史详情 backfill 与执行样本
 目标：逐步补标签票数、疑似错区辅助信息、downloadUrls。
 
 已有能力：
@@ -172,20 +174,24 @@ iPhone 可能出现文件名乱码：
 `node scripts/backfill-detail-tags.js --limit=1000 --delay-ms=700`
 另有 `npm run backfill:detail`
 
+此示例来自早期单批阶段。2026-09-04已加入连续分批：普通命令每批默认1000条、单次命令默认总上限10000条；`--limit=1000`只控制批大小，整次最多1000条需同时指定`--max-total=1000`。当前命令说明见[README.md](README.md#本地开发与历史详情补全)。
+
 性能：
 - 1000 条约 35 分钟
 - 平均每条约 2 秒
 - 全量约 48～49 小时
 因此建议每批约 1000 条，不提高并发，不一次暴跑。
 
-最近一次明确执行：
+2026-09-03阶段的明确执行：
 - 只重试了 8 条缺失 downloadUrls
 - 8 条仍为 `fetch failed`
 - 尚未开始新的下一批 1000 条
 - 累计详情处理仍约 1000 条
 - 992 条有真实下载直链
 
-下一步：跳过已处理 1000 条，不再优先卡那 8 条失败项，从新的未处理历史记录继续下一批约 1000 条。
+当时的下一步：跳过已处理 1000 条，不再优先卡那 8 条失败项，从新的未处理历史记录继续下一批约 1000 条。
+
+后续历史记录：2026-09-04连续backfill选择新的5条记录，均请求失败并安全停止；1000条、8条等前述数字保留为此前样本，当前本地侧表状态见README。
 
 ## 12. Git / Pages
 远端：`https://github.com/moshilan/asw-temp-search.git`
@@ -207,7 +213,7 @@ Pages：`https://moshilan.github.io/asw-temp-search/`
 - `4a35dd2...` 详情补缺失败重试checkpoint
 - `abee075...` 项目交接文档checkpoint
 
-如与当前仓库冲突，以 `origin/master` 为准。
+这些checkpoint用于追溯历史。当前事实须结合本地代码、文件和Git状态核实；`origin/master`是本地远端跟踪引用，未刷新时不能代替当前远端或线上运行验证。
 
 注意：
 - 普通 push 不一定立即部署 Pages；当前只依赖 workflow_dispatch，自动定时已暂停
@@ -258,21 +264,23 @@ ASW 曾明确 `.git` owner 异常并导致 Git 失败。
 - 只保留本轮新增目标、必要约束、关键验收
 - 项目根目录没有必须存在项目级 `AGENTS.md` 的要求；父级规则已覆盖时不应因此停工
 
-## 16. 当前下一步
+## 16. 2026-09-04阶段的下一步记录
 1. 确认 ASW 仓库 owner / Git 状态已恢复正常。
 2. 继续新的历史详情 backfill 1000 条。
 3. 每批完成后重建静态索引、`npm test`、commit、push。
 4. 继续观察疑似错区准确率、downloadUrls 覆盖率和下载镜像可用性。
 5. 暂不增加新架构或后端。
 
-## 17. 迁移用法
-新 ChatGPT 窗口可粘贴：
+## 17. 历史迁移话术
+以下保留当时的迁移话术，已不作为当前事实基线或日常完整读取要求。接手时读取适用AGENTS.md和README.md，结合本轮任务核实相关代码、文件及Git状态；仅在追溯决策或故障时按需查阅本文与WORKLOG.md。
+
+当时供新 ChatGPT 窗口粘贴：
 
 > 请接手项目 `20260825-asw-temp-search`。以下为项目迁移/交接文档，请以此为当前事实基线；如与 Git 仓库最新状态冲突，以 `origin/master` 和当前项目文件为准。继续前先读 README、WORKLOG 和适用 AGENTS.md，不重复设计已定案架构。
 
-新 Codex 窗口可粘贴：
+当时供新 Codex 窗口粘贴：
 
 > 继续 `C:\db\data\codex\20260825-asw-temp-search`。先读取适用 AGENTS.md、README.md、WORKLOG.md 和项目迁移文档；以 Git 当前状态为准，只处理本轮明确任务。
 
-## 18. 一句话定案
+## 18. 历史架构结论
 这是一个 GitHub Pages + GitHub Actions 的纯静态手机小说资源搜索工具；浏览器用 IndexedDB 持久缓存分片索引；原站列表页提供元数据，详情页补标签和真实 `/down.php/` 下载直链；不做代理、试读、去广告、下载目录控制；历史详情按约 1000 条一批断点补全。
