@@ -31,11 +31,15 @@
 
 每次运行从三分类第一页开始增量抓取，以hash去重；遇到已有hash后停止继续翻页，设置最大分页保护，保留旧索引并及时写入新数据。只有索引实际变化才提交，完成后生成`public/data/manifest.json`、分类分片和更新时间文件并部署到GitHubPages。单个分类失败不会清空旧索引，Actions不执行历史全量初始化。
 
+## 仅部署现有静态索引
+
+在GitHub的Actions页面选择「仅部署现有静态索引」，从默认分支手动运行。工作流只测试并发布所选提交的`public/`，无需请求原站，也不会生成索引提交。
+
 ## 首次部署GitHubPages
 
 1. 将本仓库推送到GitHub。
 2. 在仓库Settings→Pages中将Source设为GitHubActions。
-3. 在Actions页面手动运行一次更新工作流。
+3. 在Actions页面手动运行一次「仅部署现有静态索引」工作流。
 4. Pages部署完成后，使用GitHub提供的页面地址访问。
 
 工作流使用`GITHUB_TOKEN`提交索引更新，不需要额外私密Token或密码。
