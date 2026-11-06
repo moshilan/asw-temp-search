@@ -81,6 +81,12 @@ npm run backfill:detail -- --download-only --limit=1000
 
 详情标签仅用于疑似错区抽查，不改变正式原始分类筛选。日期已补全年份，按完整日期倒序显示，格式为`YYYY-MM-DD HH:mm`，没有时分时仅显示`YYYY-MM-DD`。
 
+## 772txt历史补录
+
+772txt历史补录单独手动运行。在项目根目录执行 `node scripts/backfill-772txt.js`，脚本按每批100条核查已确认的候选范围，并把逐条结果写入本地 `data/772txt-backfill-progress.log`。中断后重跑同一命令即可续跑，`--retry-failed` 只重试详情请求失败项。请勿同时运行两份脚本。
+
+全部候选均有处理结果后，`node scripts/backfill-772txt.js --apply` 生成独立的 `data/772txt-additions.json`，已有文件时会停止，避免覆盖。用 `npm run build:static-index` 重建后再运行测试。疑似重复不导入，直链未核验的条目只保留详情。
+
 ## 已知限制
 
 GitHubPages只提供静态网页，最新数据取决于最近一次手动触发GitHubActions并成功运行，不会在用户搜索时实时刷新。当前自动定时更新已暂停。原站页面结构、访问规则、下载镜像可用性或中文语言要求变化时，更新或直链可能失败，但已有静态索引仍可搜索。原始TXT编码和下载响应头不统一，部分手机可能出现正文或文件名乱码；项目不引入代理、转码或后端处理。

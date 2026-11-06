@@ -33,16 +33,19 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   const input = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'index.json'), 'utf8'));
   const pilot = await fs.readFile(path.join(rootDir, 'data', '772txt-pilot.json'), 'utf8').then(JSON.parse)
     .catch(error => error.code === 'ENOENT' ? [] : Promise.reject(error));
+  const additions = await fs.readFile(path.join(rootDir, 'data', '772txt-additions.json'), 'utf8').then(JSON.parse)
+    .catch(error => error.code === 'ENOENT' ? [] : Promise.reject(error));
+  const supplemental = [...pilot, ...additions];
   const sourceCategory = new Map([['耽美', '耽美'], ['女生', '言情'], ['男生', '男生']]);
   const seen = new Set();
-  for (const item of pilot) {
+  for (const item of supplemental) {
     if (item.source !== '772txt' || !resolveDetailUrl(item) || !sourceCategory.has(item.sourceCategory) ||
         sourceCategory.get(item.sourceCategory) !== item.category || 'hash' in item ||
         ('downloadUrls' in item && !validPilotDownloadUrls(item.downloadUrls)) ||
         seen.has(item.sourceId)) throw new Error(`无效或重复的772txt记录：${item.sourceId}`);
     seen.add(item.sourceId);
   }
-  const totalItems = input.length + pilot.length;
+  const totalItems = input.length + supplemental.length;
   const sourceMeta = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'meta.json'), 'utf8'));
   const tagState = await fs.readFile(path.join(rootDir, 'data', 'tag-classifications.json'), 'utf8').then(JSON.parse).catch(error => error.code === 'ENOENT' ? { records: {} } : Promise.reject(error));
   const tagRecords = tagState.records || {};
@@ -56,7 +59,7 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
       const record = tagRecords[item.hash];
       return { ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, legacyDateReference), ...(Array.isArray(record?.downloadUrls) && record.downloadUrls.length ? { downloadUrls: record.downloadUrls } : {}) };
     });
-    items.push(...pilot.filter(item => item.category === label));
+    items.push(...supplemental.filter(item => item.category === label));
     if (!items.length) throw new Error(`缺少${label}索引`);
     counts[label] = items.length;
     const files = [];

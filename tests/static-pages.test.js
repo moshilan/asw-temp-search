@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { buildStaticIndex, STATIC_CHUNK_SIZE, validPilotDownloadUrls } from '../scripts/build-static-index.js';
 import { createMemoryIndexCache } from '../public/index-cache.js';
 import { resolveDetailUrl } from '../public/detail-url.js';
@@ -11,8 +13,12 @@ const response = value => ({ ok: true, status: 200, json: async () => JSON.parse
 test('static manifest covers the complete local index with stable chunk fingerprints', async () => {
  const [source, manifest] = await Promise.all([fs.readFile(new URL('data/index.json', root),'utf8').then(JSON.parse),fs.readFile(new URL('manifest.json',data),'utf8').then(JSON.parse)]);
  const pilot = await fs.readFile(new URL('data/772txt-pilot.json',root),'utf8').then(JSON.parse);
+ const additions = await fs.readFile(new URL('data/772txt-additions.json',root),'utf8').then(JSON.parse)
+  .catch(error => error.code === 'ENOENT' ? [] : Promise.reject(error));
+ const supplemental = [...pilot, ...additions];
  const entries = Object.values(manifest.categories).flatMap(value => value.files);
- assert.equal(entries.reduce((sum, entry) => sum + entry.count, 0), source.length + pilot.length);
+ assert.equal(entries.reduce((sum, entry) => sum + entry.count, 0), source.length + supplemental.length);
+ assert.equal(new Set(supplemental.map(item => item.sourceId)).size, supplemental.length);
  assert.ok(entries.every(entry => /^[a-f0-9]{64}$/.test(entry.sha256)));
  assert.ok(Math.max(...entries.map(entry => entry.count)) <= STATIC_CHUNK_SIZE);
 });
@@ -44,6 +50,25 @@ test('772txt download URLs accept only distinct HTTPS file mirrors', () => {
    [primary.replace('book.txt', 'read.php')], [primary + '?token=x']]) {
   assert.equal(validPilotDownloadUrls(invalid), false);
  }
+});
+
+test('static build rejects a duplicate 772txt source ID before writing output', async t => {
+ const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'asw-772txt-build-'));
+ const sourceDir = path.join(dir, 'data');
+ await fs.mkdir(sourceDir);
+ const files = ['index.json', '772txt-pilot.json', '772txt-additions.json'];
+ t.after(async () => {
+  for (const file of files) await fs.unlink(path.join(sourceDir, file));
+  await fs.rmdir(sourceDir);
+  await fs.rmdir(dir);
+ });
+ const row = {
+  source: '772txt', sourceId: '123', sourceCategory: '耽美', category: '耽美',
+  url: 'http://772txt.com/txt-xx/15/txt-123.htm',
+ };
+ await Promise.all(files.map((file, i) => fs.writeFile(path.join(sourceDir, file), JSON.stringify(i ? [row] : []))));
+ await assert.rejects(buildStaticIndex({ rootDir: dir }), /无效或重复的772txt记录：123/);
+ await assert.rejects(fs.access(path.join(dir, 'public')), { code: 'ENOENT' });
 });
 
 test('first synchronization writes cache and same version only requests manifest', async () => {
