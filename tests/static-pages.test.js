@@ -9,10 +9,24 @@ const response = value => ({ ok: true, status: 200, json: async () => JSON.parse
 
 test('static manifest covers the complete local index with stable chunk fingerprints', async () => {
  const [source, manifest] = await Promise.all([fs.readFile(new URL('data/index.json', root),'utf8').then(JSON.parse),fs.readFile(new URL('manifest.json',data),'utf8').then(JSON.parse)]);
+ const pilot = await fs.readFile(new URL('data/772txt-pilot.json',root),'utf8').then(JSON.parse);
  const entries = Object.values(manifest.categories).flatMap(value => value.files);
- assert.equal(entries.reduce((sum, entry) => sum + entry.count, 0), source.length);
+ assert.equal(entries.reduce((sum, entry) => sum + entry.count, 0), source.length + pilot.length);
  assert.ok(entries.every(entry => /^[a-f0-9]{64}$/.test(entry.sha256)));
  assert.ok(Math.max(...entries.map(entry => entry.count)) <= STATIC_CHUNK_SIZE);
+});
+
+test('772txt pilot is searchable by mapped category and excluded from direct downloads', async () => {
+ const pilot = await fs.readFile(new URL('data/772txt-pilot.json',root),'utf8').then(JSON.parse);
+ const fetchLocal = async file => response(await fs.readFile(new URL(file.replace('./data/', ''),data),'utf8'));
+ const prepared = await prepareStaticIndex(fetchLocal, null);
+ for (const category of ['耽美', '言情', '男生']) {
+  const sample = pilot.find(item => item.category === category);
+  assert.ok(sample);
+  const { items } = await searchPreparedIndex(fetchLocal, prepared, sample.name, category);
+  assert.deepEqual(items.find(item => item.source === '772txt' && item.sourceId === sample.sourceId), sample);
+  assert.equal(filterDownloadable(items).some(item => item.source === '772txt'), false);
+ }
 });
 
 test('first synchronization writes cache and same version only requests manifest', async () => {

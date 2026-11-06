@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { normalizeUploadedAt } from '../src/parser.js';
+import { resolveDetailUrl } from '../public/detail-url.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const STATIC_CHUNK_SIZE = 4000;
@@ -15,6 +16,17 @@ async function removePreviousChunks(output) {
 }
 export async function buildStaticIndex({ rootDir = root } = {}) {
   const input = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'index.json'), 'utf8'));
+  const pilot = await fs.readFile(path.join(rootDir, 'data', '772txt-pilot.json'), 'utf8').then(JSON.parse)
+    .catch(error => error.code === 'ENOENT' ? [] : Promise.reject(error));
+  const sourceCategory = new Map([['耽美', '耽美'], ['女生', '言情'], ['男生', '男生']]);
+  const seen = new Set();
+  for (const item of pilot) {
+    if (item.source !== '772txt' || !resolveDetailUrl(item) || !sourceCategory.has(item.sourceCategory) ||
+        sourceCategory.get(item.sourceCategory) !== item.category || 'hash' in item || 'downloadUrls' in item ||
+        seen.has(item.sourceId)) throw new Error(`无效或重复的772txt记录：${item.sourceId}`);
+    seen.add(item.sourceId);
+  }
+  const totalItems = input.length + pilot.length;
   const sourceMeta = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'meta.json'), 'utf8'));
   const tagState = await fs.readFile(path.join(rootDir, 'data', 'tag-classifications.json'), 'utf8').then(JSON.parse).catch(error => error.code === 'ENOENT' ? { records: {} } : Promise.reject(error));
   const tagRecords = tagState.records || {};
@@ -28,6 +40,7 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
       const record = tagRecords[item.hash];
       return { ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, legacyDateReference), ...(Array.isArray(record?.downloadUrls) && record.downloadUrls.length ? { downloadUrls: record.downloadUrls } : {}) };
     });
+    items.push(...pilot.filter(item => item.category === label));
     if (!items.length) throw new Error(`缺少${label}索引`);
     counts[label] = items.length;
     const files = [];
@@ -42,9 +55,9 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   }
   const version = digest(JSON.stringify({ chunkSize: STATIC_CHUNK_SIZE, categories: manifestCategories }));
   const lastUpdatedAt = [sourceMeta.lastRefreshAt, sourceMeta.lastRecovery?.completedAt].filter(Boolean).sort().at(-1) || sourceMeta.initializedAt || null;
-  const manifest = { version, chunkSize: STATIC_CHUNK_SIZE, totalItems: input.length, counts, lastUpdatedAt, categories: manifestCategories };
+  const manifest = { version, chunkSize: STATIC_CHUNK_SIZE, totalItems, counts, lastUpdatedAt, categories: manifestCategories };
   await fs.writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest), 'utf8');
-  await fs.writeFile(path.join(output, 'meta.json'), JSON.stringify({ totalItems: input.length, counts, lastUpdatedAt: manifest.lastUpdatedAt, manifest: 'manifest.json', indexVersion: version }), 'utf8');
-  return { totalItems: input.length, counts, manifest, maxChunkItems };
+  await fs.writeFile(path.join(output, 'meta.json'), JSON.stringify({ totalItems, counts, lastUpdatedAt: manifest.lastUpdatedAt, manifest: 'manifest.json', indexVersion: version }), 'utf8');
+  return { totalItems, counts, manifest, maxChunkItems };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) console.log(await buildStaticIndex());

@@ -5,6 +5,18 @@ import { resolveDetailUrl } from '../public/detail-url.js';
 const hash = '254bc1a6e0481ba6d080963d1dfa6319';
 const detail = host => `https://${host}/file.php?hash=${hash}`;
 
+test('772txt details use the independent source ID and an allowed source URL', () => {
+  const url = 'http://772txt.com/txt-xx/nsxs/dsyq/txt-284425.htm';
+  const item = { source: '772txt', sourceId: '284425', url };
+  assert.equal(resolveDetailUrl(item), url);
+  for (const invalid of [
+    { ...item, sourceId: '123' },
+    { ...item, url: url.replace('772txt.com', '772txt.com.example.net') },
+    { ...item, url: url.replace('/nsxs/dsyq/', '/19/') },
+    { ...item, url: url + '?redirect=elsewhere' },
+  ]) assert.equal(resolveDetailUrl(invalid), '');
+});
+
 test('legacy links follow the recorded source host for all three categories', () => {
   for (const [category, source, mirror] of [
     ['耽美', 'www.asw227.com', 'dm.downshu123.com'],
