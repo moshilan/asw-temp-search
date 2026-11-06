@@ -1,5 +1,5 @@
 {
-  "lastRefreshAt": "2026-09-03T16:08:12.243Z",
+  "lastRefreshAt": "2026-11-06T11:46:22.800Z",
   "sources": {
     "danmei": {
       "lastRefreshAt": "2026-09-03T16:08:09.484Z",
@@ -8,10 +8,10 @@
       "totalPages": 484
     },
     "yanqing": {
-      "lastRefreshAt": "2026-09-03T16:08:11.365Z",
+      "lastRefreshAt": "2026-11-06T11:46:22.800Z",
       "pagesRead": 1,
-      "added": 24,
-      "totalPages": 357
+      "added": 0,
+      "totalPages": 1
     },
     "nansheng": {
       "lastRefreshAt": "2026-09-03T16:08:12.243Z",
