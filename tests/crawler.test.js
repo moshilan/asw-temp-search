@@ -48,6 +48,38 @@ test('a failed category does not clear the existing index or block another categ
   assert.deepEqual(db.state.items.map(x => x.hash).sort(), [hash(1), hash(9)].sort());
 });
 
+test('a welcome page is reported as failure without updating index or source metadata', async () => {
+  const items = [{ hash: hash(9), category: '言情', name: '已有资源' }];
+  const meta = { lastRefreshAt: '2026-09-03T16:08:12.243Z', sources: { yanqing: { totalPages: 357, added: 24 } } };
+  const db = memory(items, structuredClone(meta));
+  const result = await refreshAll({
+    ...db,
+    sourceIds: ['yanqing'],
+    fetchHtmlFn: async () => '<html><title>Welcome</title><body></body></html>',
+  });
+  assert.deepEqual(result.results, []);
+  assert.deepEqual(result.errors, [{ sourceId: 'yanqing', error: '言情第1页不是有效列表，缺少资源或分页信息' }]);
+  assert.deepEqual(db.state, { items, meta, savedItems: 0, savedMeta: 0 });
+});
+
+test('missing pagination on a later page fails without committing a partial refresh', async () => {
+  const db = memory();
+  await assert.rejects(refreshSource('yanqing', {
+    ...db,
+    fetchHtmlFn: async url => url.includes('page=2') ? item(hash(2)) : page([item(hash(1))]),
+  }), /言情第2页不是有效列表/);
+  assert.equal(db.state.savedItems, 0);
+  assert.equal(db.state.savedMeta, 0);
+});
+
+test('a valid one-page list with only known hashes still reports zero additions successfully', async () => {
+  const db = memory([{ hash: hash(1), category: '言情', name: '已有资源' }]);
+  const result = await refreshSource('yanqing', { ...db, fetchHtmlFn: async () => page([item(hash(1))], 1) });
+  assert.equal(result.added, 0);
+  assert.equal(db.state.meta.sources.yanqing.totalPages, 1);
+  assert.equal(db.state.savedMeta, 1);
+});
+
 test('initialization resumes from its saved next page and saves each fetched page', async () => {
   const db = memory(
     [{ hash: hash(1), category: '耽美', name: '第一页资源' }],

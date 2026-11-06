@@ -4,6 +4,14 @@ import { loadItems, loadMeta, mergeItems, saveItems, saveMeta } from './store.js
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+function requireListPage(html, source, page) {
+  const parsed = parseListPage(html, source);
+  if (!parsed.items.length || !/共\s*[1-9]\d*\s*页/.test(parsed.pageInfo)) {
+    throw new Error(`${source.label}第${page}页不是有效列表，缺少资源或分页信息`);
+  }
+  return parsed;
+}
+
 export async function fetchHtml(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
@@ -38,10 +46,9 @@ export async function refreshSource(sourceId, {
 
   for (let page = 1; page <= maxPages; page++) {
     const url = new URL(source.pagePath(page), source.origin).href;
-    const parsed = parseListPage(await fetchHtmlFn(url), source);
+    const parsed = requireListPage(await fetchHtmlFn(url), source, page);
     pagesRead++;
     totalPages ??= parsed.totalPages;
-    if (!parsed.items.length) break;
     for (const item of parsed.items) {
       if (known.has(item.hash)) { hitKnown = true; continue; }
       incoming.push(item);
@@ -96,7 +103,7 @@ export async function initializeAll({
     let added = 0;
     while (!pages || page <= pages) {
       const html = await fetchHtmlFn(new URL(source.pagePath(page), source.origin).href);
-      const parsed = parseListPage(html, source);
+      const parsed = requireListPage(html, source, page);
       pages ??= parsed.totalPages || 1;
       const before = all.length;
       all = mergeItems(all, parsed.items);
