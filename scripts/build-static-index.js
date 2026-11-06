@@ -9,6 +9,21 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const STATIC_CHUNK_SIZE = 4000;
 const categories = [{ id: 'danmei', label: '耽美', chunked: true }, { id: 'yanqing', label: '言情', chunked: true }, { id: 'nansheng', label: '男生', chunked: false }];
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
+const pilotDownloadOrigins = new Set(['https://mg.downbook12.com', 'https://mg3s.downbook8.com']);
+export function validPilotDownloadUrls(urls) {
+  if (!Array.isArray(urls) || urls.length < 1 || urls.length > 2) return false;
+  const origins = new Set();
+  for (const url of urls) {
+    if (typeof url !== 'string') return false;
+    let parsed;
+    try { parsed = new URL(url); } catch { return false; }
+    if (!pilotDownloadOrigins.has(parsed.origin) || parsed.username || parsed.password ||
+        parsed.search || parsed.hash || origins.has(parsed.origin) ||
+        !/^\/txt-xx\/UploadFile\/\d{4}-\d{1,2}\/[^/]+\.(?:txt|zip)$/i.test(parsed.pathname)) return false;
+    origins.add(parsed.origin);
+  }
+  return true;
+}
 const chunkItems = (items, size) => Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, index * size + size));
 async function removePreviousChunks(output) {
   const files = await fs.readdir(output);
@@ -22,7 +37,8 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   const seen = new Set();
   for (const item of pilot) {
     if (item.source !== '772txt' || !resolveDetailUrl(item) || !sourceCategory.has(item.sourceCategory) ||
-        sourceCategory.get(item.sourceCategory) !== item.category || 'hash' in item || 'downloadUrls' in item ||
+        sourceCategory.get(item.sourceCategory) !== item.category || 'hash' in item ||
+        ('downloadUrls' in item && !validPilotDownloadUrls(item.downloadUrls)) ||
         seen.has(item.sourceId)) throw new Error(`无效或重复的772txt记录：${item.sourceId}`);
     seen.add(item.sourceId);
   }

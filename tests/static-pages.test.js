@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { buildStaticIndex, STATIC_CHUNK_SIZE } from '../scripts/build-static-index.js';
+import { buildStaticIndex, STATIC_CHUNK_SIZE, validPilotDownloadUrls } from '../scripts/build-static-index.js';
 import { createMemoryIndexCache } from '../public/index-cache.js';
+import { resolveDetailUrl } from '../public/detail-url.js';
 import { filterDownloadable, INDEX_MANIFEST_FILE, prepareStaticIndex, searchLocal, searchPreparedIndex } from '../public/search.js';
 const root = new URL('../', import.meta.url), data = new URL('../public/data/', import.meta.url);
 const response = value => ({ ok: true, status: 200, json: async () => JSON.parse(value), text: async () => value });
@@ -16,16 +17,32 @@ test('static manifest covers the complete local index with stable chunk fingerpr
  assert.ok(Math.max(...entries.map(entry => entry.count)) <= STATIC_CHUNK_SIZE);
 });
 
-test('772txt pilot is searchable by mapped category and excluded from direct downloads', async () => {
+test('772txt pilot retains detail links and exposes only verified download metadata', async () => {
  const pilot = await fs.readFile(new URL('data/772txt-pilot.json',root),'utf8').then(JSON.parse);
+ assert.ok(pilot.some(item => item.downloadUrls?.length));
  const fetchLocal = async file => response(await fs.readFile(new URL(file.replace('./data/', ''),data),'utf8'));
  const prepared = await prepareStaticIndex(fetchLocal, null);
  for (const category of ['耽美', '言情', '男生']) {
-  const sample = pilot.find(item => item.category === category);
+  const sample = pilot.find(item => item.category === category && item.downloadUrls?.length) ??
+    pilot.find(item => item.category === category);
   assert.ok(sample);
   const { items } = await searchPreparedIndex(fetchLocal, prepared, sample.name, category);
   assert.deepEqual(items.find(item => item.source === '772txt' && item.sourceId === sample.sourceId), sample);
-  assert.equal(filterDownloadable(items).some(item => item.source === '772txt'), false);
+  const direct = filterDownloadable(items).filter(item => item.source === '772txt');
+  assert.deepEqual(direct, items.filter(item => item.source === '772txt' && item.downloadUrls?.length));
+  assert.equal(resolveDetailUrl(sample), sample.url);
+ }
+});
+
+test('772txt download URLs accept only distinct HTTPS file mirrors', () => {
+ const primary = 'https://mg.downbook12.com/txt-xx/UploadFile/2026-10/book.txt';
+ const backup = primary.replace('mg.downbook12.com', 'mg3s.downbook8.com');
+ assert.ok(validPilotDownloadUrls([primary, backup]));
+ assert.ok(validPilotDownloadUrls([backup]));
+ for (const invalid of [[], [primary, primary], [primary.replace('https:', 'http:')],
+   [primary.replace('mg.downbook12.com', 'mg.downbook12.com.invalid')],
+   [primary.replace('book.txt', 'read.php')], [primary + '?token=x']]) {
+  assert.equal(validPilotDownloadUrls(invalid), false);
  }
 });
 
