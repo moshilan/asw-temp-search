@@ -1,5 +1,5 @@
 import { fetchWithRetry, openIndexCache } from './index-cache.js';
-import { resolveDetailUrl } from './detail-url.js';
+import { resolveDetailUrl } from './detail-url.js?v=772txt-pilot';
 import { filterDownloadable, prepareStaticIndex, searchPreparedIndex } from './search.js';
 import { onlySuspected, sortSuspected, suspectedRecord, suggestedCategory, voteSummary } from './suspected-misclassification.js';
 const PAGE_SIZE=75;
