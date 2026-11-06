@@ -42,5 +42,17 @@
       }
     }
   },
-  "initializedAt": "2026-08-24T20:37:29.193Z"
+  "initializedAt": "2026-08-24T20:37:29.193Z",
+  "lastRecovery": {
+    "completedAt": "2026-11-06T09:47:54.705Z",
+    "fromExclusive": "2026-09-04T00:08:12+08:00",
+    "toExclusive": "2026-10-29T00:00:00+08:00",
+    "legacyDateReference": "2026-09-04T00:00:00",
+    "added": 13513,
+    "counts": {
+      "言情": 6435,
+      "耽美": 6134,
+      "男生": 944
+    }
+  }
 }

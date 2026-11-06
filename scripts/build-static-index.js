@@ -18,6 +18,7 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   const sourceMeta = JSON.parse(await fs.readFile(path.join(rootDir, 'data', 'meta.json'), 'utf8'));
   const tagState = await fs.readFile(path.join(rootDir, 'data', 'tag-classifications.json'), 'utf8').then(JSON.parse).catch(error => error.code === 'ENOENT' ? { records: {} } : Promise.reject(error));
   const tagRecords = tagState.records || {};
+  const legacyDateReference = sourceMeta.lastRecovery?.legacyDateReference || sourceMeta.lastRefreshAt;
   const output = path.join(rootDir, 'public', 'data');
   await fs.mkdir(output, { recursive: true });
   await removePreviousChunks(output);
@@ -25,7 +26,7 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
   for (const { id, label, chunked } of categories) {
     const items = input.filter(item => item.category === label).map(item => {
       const record = tagRecords[item.hash];
-      return { ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, sourceMeta.lastRefreshAt), ...(Array.isArray(record?.downloadUrls) && record.downloadUrls.length ? { downloadUrls: record.downloadUrls } : {}) };
+      return { ...item, uploadedAt: normalizeUploadedAt(item.uploadedAt, legacyDateReference), ...(Array.isArray(record?.downloadUrls) && record.downloadUrls.length ? { downloadUrls: record.downloadUrls } : {}) };
     });
     if (!items.length) throw new Error(`缺少${label}索引`);
     counts[label] = items.length;
@@ -40,7 +41,8 @@ export async function buildStaticIndex({ rootDir = root } = {}) {
     manifestCategories[label] = { count: items.length, files };
   }
   const version = digest(JSON.stringify({ chunkSize: STATIC_CHUNK_SIZE, categories: manifestCategories }));
-  const manifest = { version, chunkSize: STATIC_CHUNK_SIZE, totalItems: input.length, counts, lastUpdatedAt: sourceMeta.lastRefreshAt || sourceMeta.initializedAt || null, categories: manifestCategories };
+  const lastUpdatedAt = [sourceMeta.lastRefreshAt, sourceMeta.lastRecovery?.completedAt].filter(Boolean).sort().at(-1) || sourceMeta.initializedAt || null;
+  const manifest = { version, chunkSize: STATIC_CHUNK_SIZE, totalItems: input.length, counts, lastUpdatedAt, categories: manifestCategories };
   await fs.writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest), 'utf8');
   await fs.writeFile(path.join(output, 'meta.json'), JSON.stringify({ totalItems: input.length, counts, lastUpdatedAt: manifest.lastUpdatedAt, manifest: 'manifest.json', indexVersion: version }), 'utf8');
   return { totalItems: input.length, counts, manifest, maxChunkItems };
